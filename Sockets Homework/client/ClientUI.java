@@ -27,6 +27,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.ScrollPaneConstants;
+import java.awt.font.TextAttribute;
 
 public class ClientUI extends JFrame implements Event {
     /**
@@ -39,7 +40,7 @@ public class ClientUI extends JFrame implements Event {
     JPanel userPanel;
     List<User> users = new ArrayList<User>();
     private final static Logger log = Logger.getLogger(ClientUI.class.getName());
-    Dimension windowSize = new Dimension(400, 400);
+    Dimension windowSize = new Dimension(600, 400);
 
     public ClientUI(String title) {
 	setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -64,7 +65,7 @@ public class ClientUI extends JFrame implements Event {
 	panel.add(hostLabel);
 	panel.add(host);
 	JLabel portLabel = new JLabel("Port:");
-	JTextField port = new JTextField("3000");
+	JTextField port = new JTextField("69");
 	panel.add(portLabel);
 	panel.add(port);
 	JButton button = new JButton("Next");
@@ -165,7 +166,7 @@ public class ClientUI extends JFrame implements Event {
 	scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 	scroll.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
 
-	Dimension d = new Dimension(100, windowSize.height);
+	Dimension d = new Dimension(200, windowSize.height);
 	scroll.setPreferredSize(d);
 
 	textArea.getParent().getParent().getParent().add(scroll, BorderLayout.EAST);
@@ -213,6 +214,7 @@ public class ClientUI extends JFrame implements Event {
 
     void addMessage(String str) {
 	JEditorPane entry = new JEditorPane();
+   entry.setContentType("text/html");
 	entry.setEditable(false);
 	// entry.setLayout(null);
 	entry.setText(str);
@@ -275,11 +277,15 @@ public class ClientUI extends JFrame implements Event {
 
 	}
     }
-
-    @Override
+    
     public void onMessageReceive(String clientName, String message) {
 	log.log(Level.INFO, String.format("%s: %s", clientName, message));
-	self.addMessage(String.format("%s: %s", clientName, message));
+	   if (clientName != "") {
+         self.addMessage(String.format("%s: %s", clientName, message));
+      }
+      else {
+         self.addMessage(String.format("%s", message));
+      }
     }
 
     @Override
@@ -293,7 +299,7 @@ public class ClientUI extends JFrame implements Event {
     }
 
     public static void main(String[] args) {
-	ClientUI ui = new ClientUI("My UI");
+	ClientUI ui = new ClientUI("Chat Room");
 	if (ui != null) {
 	    log.log(Level.FINE, "Started");
 	}

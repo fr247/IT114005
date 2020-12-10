@@ -5,8 +5,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.Random;
 
 public class Room implements AutoCloseable {
+
+    Random rand = new Random();
     private static SocketServer server;// used to refer to accessible server functions
     private String name;
     private final static Logger log = Logger.getLogger(Room.class.getName());
@@ -15,6 +18,8 @@ public class Room implements AutoCloseable {
     private final static String COMMAND_TRIGGER = "/";
     private final static String CREATE_ROOM = "createroom";
     private final static String JOIN_ROOM = "joinroom";
+    private final static String ROLL = "roll";
+    private final static String FLIP = "flip";
 
     public Room(String name) {
 	this.name = name;
@@ -122,6 +127,23 @@ public class Room implements AutoCloseable {
 		    joinRoom(roomName, client);
 		    wasCommand = true;
 		    break;
+      case FLIP:
+          int flipAnswer = rand.nextInt(2);
+          wasCommand = true;
+          if (flipAnswer == 0){
+             broadcastMessage(client, "<b>"+ client.getClientName() + " flipped a coin! It landed on heads.</b>");
+          }
+          if (flipAnswer == 1){
+             broadcastMessage(client, "<b>"+ client.getClientName() + " flipped a coin! It landed on tails.</b>");
+          }
+          break;
+      case ROLL:
+          int rollAnswer = rand.nextInt(6)+1;
+          wasCommand = true;
+          broadcastMessage(client, "<b>"+ client.getClientName() + " used a die! They rolled a "+rollAnswer+".</b>");
+          break;
+
+
 		}
 	    }
 	}
@@ -157,11 +179,61 @@ public class Room implements AutoCloseable {
 	if (processCommands(message, sender)) {
 	    // it was a command, don't broadcast
 	    return;
+   
 	}
+   while (message.indexOf("**") > -1){
+       try{
+          message = message.replaceFirst("\\*\\*","<b>");
+          message = message.replaceFirst("\\*\\*","</b>");
+          }
+       catch(Exception e){
+          break;
+          }
+       }
+   while (message.indexOf("*") > -1){
+       try{
+          message = message.replaceFirst("\\*","<i>");
+          message = message.replaceFirst("\\*","</i>");
+          }
+       catch(Exception e){
+          break;
+          }
+       }
+   while (message.indexOf("__") > -1){
+       try{
+          message = message.replaceFirst("__","<U>");
+          message = message.replaceFirst("__","</U>");
+          }
+       catch(Exception e){
+          break;
+          }
+       }
+   while (message.indexOf("~~") > -1){
+       try{
+          message = message.replaceFirst("~~","<strike>");
+          message = message.replaceFirst("~~","</strike>");
+          }
+       catch(Exception e){
+          break;
+          }
+       }
 	Iterator<ServerThread> iter = clients.iterator();
 	while (iter.hasNext()) {
 	    ServerThread client = iter.next();
 	    boolean messageSent = client.send(sender.getClientName(), message);
+	    if (!messageSent) {
+		iter.remove();
+		log.log(Level.INFO, "Removed client " + client.getId());
+	    }
+	}
+    }
+    
+    protected void broadcastMessage(ServerThread sender, String message) {
+	log.log(Level.INFO, getName() + ": Sending message to " + clients.size() + " clients");
+   	Iterator<ServerThread> iter = clients.iterator();
+	while (iter.hasNext()) {
+	    ServerThread client = iter.next();
+	    boolean messageSent = client.sendbc(sender.getClientName(), message);
 	    if (!messageSent) {
 		iter.remove();
 		log.log(Level.INFO, "Removed client " + client.getId());
