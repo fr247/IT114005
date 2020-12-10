@@ -74,6 +74,15 @@ public class ServerThread extends Thread {
 	payload.setPayloadType(PayloadType.MESSAGE);
 	payload.setClientName(clientName);
 	payload.setMessage(message);
+   
+   return sendPayload(payload);
+   }
+   
+   protected boolean sendbc(String clientName, String message) {
+	Payload payload = new Payload();
+	payload.setPayloadType(PayloadType.MESSAGE);
+	payload.setClientName("");
+	payload.setMessage(message);
 
 	return sendPayload(payload);
     }
