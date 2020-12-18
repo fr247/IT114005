@@ -20,6 +20,9 @@ public class Room implements AutoCloseable {
     private final static String JOIN_ROOM = "joinroom";
     private final static String ROLL = "roll";
     private final static String FLIP = "flip";
+    private final static String MUTE = "mute";
+    private final static String UNMUTE = "unmute";
+    private final static String PM = "@";
 
     public Room(String name) {
 	this.name = name;
@@ -103,12 +106,35 @@ public class Room implements AutoCloseable {
      */
     private boolean processCommands(String message, ServerThread client) {
 	boolean wasCommand = false;
+   boolean userExists = false;
 	try {
+      if (message.indexOf(PM) > -1) {
+         userExists = false;
+         wasCommand = true;
+		   String[] comm = message.split(PM);
+         message = message.replaceAll(PM, "");
+		   log.log(Level.INFO, message);
+		   String part1 = comm[1];
+		   String[] comm2 = part1.split(" ", 2);
+         Iterator<ServerThread> iter = clients.iterator();
+	       while (iter.hasNext()) {
+	         ServerThread clientSearch = iter.next();
+            if (clientSearch.getClientName().equals(comm2[0])){
+               sendPrivateMessage(client, "<i>"+client.getClientName()+">You: "+comm2[1]+"</i>", comm2[0]);
+               sendPrivateMessage(client, "<i>You>"+comm2[0]+": "+comm2[1]+"</i>", client.getClientName());
+               userExists = true;
+               break;
+               }
+               }
+           if(!userExists){sendPrivateMessage(client, "<font color='red'><i>User, "+comm2[0]+" does not exist.</i></font>", client.getClientName());}
+
+         }
+
 	    if (message.indexOf(COMMAND_TRIGGER) > -1) {
 		String[] comm = message.split(COMMAND_TRIGGER);
 		log.log(Level.INFO, message);
 		String part1 = comm[1];
-		String[] comm2 = part1.split(" ");
+		String[] comm2 = part1.split(" ", 2);
 		String command = comm2[0];
 		if (command != null) {
 		    command = command.toLowerCase();
@@ -131,18 +157,38 @@ public class Room implements AutoCloseable {
           int flipAnswer = rand.nextInt(2);
           wasCommand = true;
           if (flipAnswer == 0){
-             broadcastMessage(client, "<b>"+ client.getClientName() + " flipped a coin! It landed on heads.</b>");
+             broadcastMessage(client, "<font color='purple'><b>"+ client.getClientName() + " flipped a coin! It landed on heads.</b></font>");
           }
           if (flipAnswer == 1){
-             broadcastMessage(client, "<b>"+ client.getClientName() + " flipped a coin! It landed on tails.</b>");
+             broadcastMessage(client, "<font color='purple'><b>"+ client.getClientName() + " flipped a coin! It landed on tails.</b></font>");
           }
           break;
       case ROLL:
           int rollAnswer = rand.nextInt(6)+1;
           wasCommand = true;
-          broadcastMessage(client, "<b>"+ client.getClientName() + " used a die! They rolled a "+rollAnswer+".</b>");
+          broadcastMessage(client, "<font color='purple'><b>"+ client.getClientName() + " used a die! They rolled a "+rollAnswer+".</b></font>");
           break;
-
+      case MUTE:
+          wasCommand = true;
+          userExists = false;
+          Iterator<ServerThread> iter = clients.iterator();
+	       while (iter.hasNext()) {
+	         ServerThread clientSearch = iter.next();
+            if (clientSearch.getClientName().equals(comm2[1])){
+               sendPrivateMessage(client, "<font color='red'><b>"+comm2[1]+" has been muted. You will no longer be able to see their messages.</b></font>", client.getClientName());
+               sendPrivateMessage(client, "<font color='blue'><b>You have been muted by "+client.getClientName()+". They will no longer be able to see your messages.</b></font>", comm2[1]);
+               userExists = true;
+               break;
+               }
+               }
+               if(!userExists){sendPrivateMessage(client, "<font color='red'><b>User, "+comm2[1]+" does not exist.</b></font>", client.getClientName());}
+            
+          break;
+      case UNMUTE:
+          wasCommand = true;
+          sendPrivateMessage(client, "<font color='red'><b>"+comm2[1]+" has been unmuted. You can see their messages again.</b></font>", client.getClientName());
+          sendPrivateMessage(client, "<font color='blue'><b>You have been unmuted by "+client.getClientName()+". They can see your messages again.", comm2[1]);
+          break;
 
 		}
 	    }
@@ -227,6 +273,58 @@ public class Room implements AutoCloseable {
 	    }
 	}
     }
+    
+    protected void sendPrivateMessage(ServerThread sender, String message, String receiver) {
+	log.log(Level.INFO, getName() + ": Sending private message to client");
+   while (message.indexOf("**") > -1){
+       try{
+          message = message.replaceFirst("\\*\\*","<b>");
+          message = message.replaceFirst("\\*\\*","</b>");
+          }
+       catch(Exception e){
+          break;
+          }
+       }
+   while (message.indexOf("*") > -1){
+       try{
+          message = message.replaceFirst("\\*","<i>");
+          message = message.replaceFirst("\\*","</i>");
+          }
+       catch(Exception e){
+          break;
+          }
+       }
+   while (message.indexOf("__") > -1){
+       try{
+          message = message.replaceFirst("__","<U>");
+          message = message.replaceFirst("__","</U>");
+          }
+       catch(Exception e){
+          break;
+          }
+       }
+   while (message.indexOf("~~") > -1){
+       try{
+          message = message.replaceFirst("~~","<strike>");
+          message = message.replaceFirst("~~","</strike>");
+          }
+       catch(Exception e){
+          break;
+          }
+       }
+	Iterator<ServerThread> iter = clients.iterator();
+	while (iter.hasNext()) {
+	    ServerThread client = iter.next();
+	    if (client.getClientName().equals(receiver)){
+         boolean messageSent = client.sendbc(sender.getClientName(), message);
+	      //if (!messageSent) {
+		     // iter.remove();
+		      //log.log(Level.INFO, "Removed client " + client.getId());
+	     // }
+      }
+	}
+    }
+
     
     protected void broadcastMessage(ServerThread sender, String message) {
 	log.log(Level.INFO, getName() + ": Sending message to " + clients.size() + " clients");

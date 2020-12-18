@@ -14,6 +14,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.Arrays;
 
 import javax.swing.AbstractAction;
 import javax.swing.BoxLayout;
@@ -41,6 +42,12 @@ public class ClientUI extends JFrame implements Event {
     List<User> users = new ArrayList<User>();
     private final static Logger log = Logger.getLogger(ClientUI.class.getName());
     Dimension windowSize = new Dimension(600, 400);
+    String[] muteList = new String[] {};
+    String[] muteListTemp = new String[] {};
+    String messageSplitter;
+    boolean safeMessage;
+    boolean PM;
+    int n;
 
     public ClientUI(String title) {
 	setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -280,11 +287,58 @@ public class ClientUI extends JFrame implements Event {
     
     public void onMessageReceive(String clientName, String message) {
 	log.log(Level.INFO, String.format("%s: %s", clientName, message));
-	   if (clientName != "") {
-         self.addMessage(String.format("%s: %s", clientName, message));
+      safeMessage = true;
+      PM = true;
+	   if (clientName == "") {
+         if (message.contains("has been muted. You will no longer be able to see their messages.</b></font>")){
+         PM = false;
+            muteList = Arrays.copyOf(muteList, muteList.length + 1);
+            messageSplitter = message.replaceAll("<font color='red'><b>", "");
+            messageSplitter = messageSplitter.replaceAll(" has been muted. You will no longer be able to see their messages.</b></font>", "");
+            if(!Arrays.asList(muteList).contains(messageSplitter.toLowerCase())){
+               muteList[muteList.length - 1] = messageSplitter.toLowerCase();
+           }
+            else{
+            message = "<font color='red'><b>"+messageSplitter+" has already been muted.</b></font>";
+           }
       }
-      else {
-         self.addMessage(String.format("%s", message));
+      if (message.contains("has been unmuted. You can see their messages again.</b></font>")){
+         PM = false;
+            messageSplitter = message.replaceAll("<font color='red'><b>", "");
+            messageSplitter = messageSplitter.replaceAll(" has been unmuted. You can see their messages again.</b></font>", "");
+            if (Arrays.asList(muteList).contains(messageSplitter.toLowerCase())){
+            n=0;
+            muteListTemp = Arrays.copyOf(muteList, muteList.length-1);
+            for (int i=0 ; i < muteList.length ; i++){
+                  if (!muteList[i].contains(messageSplitter.toLowerCase())){
+                     muteListTemp[n] = muteList[i];
+                     n++;
+                  }
+               }
+               muteList = Arrays.copyOf(muteListTemp, muteListTemp.length);
+            }
+            else{
+               message = "<font color='red'><b>"+messageSplitter+" is not muted.</b></font>";
+         }
+      }
+      if (message.contains("<font color='purple'><b>")){PM = true;}
+      if (message.contains("<font color='blue'>")){PM = false;}
+      
+         for (int i=0; i < muteList.length; i++){
+            System.out.println(muteList[i]);
+            System.out.println(message);
+            if (message.toLowerCase().contains(muteList[i]) && PM){
+               safeMessage = false;
+            }
+         }
+         System.out.println(safeMessage+" "+PM);
+         if(safeMessage){self.addMessage(String.format("%s", message));}
+         safeMessage = true;
+      }
+      
+      
+      else if(!Arrays.asList(muteList).contains(clientName.toLowerCase())) {
+         self.addMessage(String.format("%s: %s", clientName, message));
       }
     }
 
